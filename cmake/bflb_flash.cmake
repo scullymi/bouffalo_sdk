@@ -30,7 +30,7 @@ if(EXISTS "${BL_SDK_BASE}/tools/bflb_tools")
     message(STATUS "Use full firmware tool: ${BL_FW_POST_PROC}")
 else()
     set(FULL_FLASH_TOOL OFF)
-    set(BFLB_IMAGE_TOOL python3 ${BL_SDK_BASE}/tools/bflb_flash/bflb_whole_bin.py)
+    set(BFLB_IMAGE_TOOL ${Python3_EXECUTABLE} ${BL_SDK_BASE}/tools/bflb_flash/bflb_whole_bin.py)
     set(BFLB_IMAGE_DIR ${CMAKE_CURRENT_BINARY_DIR}/images)
 
     message(STATUS "Use simple firmware tool: ${BL_SDK_BASE}/tools/bflb_flash/bflb_whole_bin.py")
@@ -85,7 +85,7 @@ if(FULL_FLASH_TOOL)
         ${BL_SDK_BASE}/tools/bflb_tools/flash_prog_cfg.py)
     set(FLASH_PROG_CFG ${CMAKE_CURRENT_BINARY_DIR}/flash_prog_cfg.ini)
     set(FLASH_PROG_CFG_CMD
-        python3 "${FLASH_PROG_CFG_GENERATOR}"
+        ${Python3_EXECUTABLE} "${FLASH_PROG_CFG_GENERATOR}"
         --partition-table "${BFLB_PT_FILE}"
         --output "${FLASH_PROG_CFG}"
         --application "${BIN_FILE}")
@@ -217,7 +217,7 @@ if(CONFIG_POST_BUILDS_CONCAT_WITH_LP_FW)
     endif()
     list(APPEND post_build_cmds
         COMMAND ${CMAKE} -E echo "[lp_fw] concate with lp fw bin"
-        COMMAND python3 ${BL_SDK_BASE}/tools/byai/multi_bins.py
+        COMMAND ${Python3_EXECUTABLE} ${BL_SDK_BASE}/tools/byai/multi_bins.py
 	        ${BIN_FILE}
 		--append LPFW
 		${LPFW_BIN}
@@ -240,7 +240,7 @@ if(CONFIG_DUALCORE_NP_IMAGE)
     endif()
     list(APPEND post_build_cmds
         COMMAND ${CMAKE} -E echo "[dualcore] append CONFIG_DUALCORE_NP_IMAGE"
-	COMMAND python3 ${BL_SDK_BASE}/tools/byai/multi_bins.py
+	COMMAND ${Python3_EXECUTABLE} ${BL_SDK_BASE}/tools/byai/multi_bins.py
 	        ${BIN_FILE}
                 --append NP
                 ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_DUALCORE_NP_IMAGE}
@@ -253,7 +253,7 @@ endif()
 if(CONFIG_THIRDCORE_LP_IMAGE)
     list(APPEND post_build_cmds
         COMMAND ${CMAKE} -E echo "[dualcore] append CONFIG_THIRDCORE_LP_IMAGE"
-	COMMAND python3 ${BL_SDK_BASE}/tools/byai/multi_bins.py
+	COMMAND ${Python3_EXECUTABLE} ${BL_SDK_BASE}/tools/byai/multi_bins.py
 	        ${BIN_FILE}
                 --append LP
                 ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_THIRDCORE_LP_IMAGE}
@@ -268,12 +268,12 @@ if(CONFIG_BACKTRACE)
         COMMAND ${CMAKE} -E echo "[dwarfcfi] generating and embedding DWARF CFI table"
         # Step 1: Generate DWARFCFI bin from ELF
 	#COMMAND ${CMAKE} -E echo "  [1/2] Generating DWARFCFI bin from ELF..."
-        COMMAND python3 ${BL_SDK_BASE}/tools/byai/unwind_6byte_table.py
+        COMMAND ${Python3_EXECUTABLE} ${BL_SDK_BASE}/tools/byai/unwind_6byte_table.py
             ${CMAKE_CURRENT_BINARY_DIR}/build_out/dwarfcfi.bin
             ${ELF_FILE}
         # Step 2: Append DWARFCFI to firmware using multi_bins.py
 	#COMMAND ${CMAKE} -E echo "  [2/2] Appending DWARFCFI to firmware..."
-        COMMAND python3 ${BL_SDK_BASE}/tools/byai/multi_bins.py
+        COMMAND ${Python3_EXECUTABLE} ${BL_SDK_BASE}/tools/byai/multi_bins.py
             ${BIN_FILE}
             --append DWARFCFI
             ${CMAKE_CURRENT_BINARY_DIR}/build_out/dwarfcfi.bin
@@ -288,13 +288,13 @@ if(CONFIG_X509_CERTIFICATE_BUNDLE)
     list(APPEND post_build_cmds
         COMMAND ${CMAKE} -E echo "[certs] generating and embedding x509 certificate bundle"
         # Step 1: Generate certificate bundle from PEM files (filtered)
-        COMMAND python3 ${BL_SDK_BASE}/components/crypto/mbedtls/bl_crt_bundle/gen_crt_bundle.py
+        COMMAND ${Python3_EXECUTABLE} ${BL_SDK_BASE}/components/crypto/mbedtls/bl_crt_bundle/gen_crt_bundle.py
             --input ${BL_SDK_BASE}/components/crypto/mbedtls/bl_crt_bundle/cacrt_all.pem
             --filter ${BL_SDK_BASE}/components/crypto/mbedtls/bl_crt_bundle/cmn_crt_authorities.csv
             --output ${CMAKE_CURRENT_BINARY_DIR}/build_out/x509_crt_bundle
             --quiet
         # Step 2: Append certificate bundle to firmware using multi_bins.py
-        COMMAND python3 ${BL_SDK_BASE}/tools/byai/multi_bins.py
+        COMMAND ${Python3_EXECUTABLE} ${BL_SDK_BASE}/tools/byai/multi_bins.py
             ${BIN_FILE}
             --append CERTS
             ${CMAKE_CURRENT_BINARY_DIR}/build_out/x509_crt_bundle
@@ -307,7 +307,7 @@ endif()
 if(CONFIG_SHELL AND CONFIG_SHELL_AUTOLIST_FILE)
     list(APPEND post_build_cmds
         COMMAND ${CMAKE} -E echo "[shell_auto] auto execute shell commands ${CONFIG_SHELL_AUTOLIST_FILE} after boot"
-        COMMAND python3 ${BL_SDK_BASE}/tools/byai/multi_bins.py
+        COMMAND ${Python3_EXECUTABLE} ${BL_SDK_BASE}/tools/byai/multi_bins.py
             ${BIN_FILE}
             --append AUTOLIST
             ${CONFIG_SHELL_AUTOLIST_FILE}

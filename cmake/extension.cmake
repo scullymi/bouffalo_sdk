@@ -375,6 +375,8 @@ macro(project name)
     )
   endif()
 
+  # the Python of the SDK's tools, Python3_EXECUTABLE when given: Windows has no python3
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
   include(${BL_SDK_BASE}/cmake/bflb_flash.cmake)
   include(${BL_SDK_BASE}/cmake/footprint.cmake)
 
