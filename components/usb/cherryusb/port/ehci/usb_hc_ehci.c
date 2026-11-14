@@ -623,11 +623,6 @@ static void ehci_urb_waitup(struct usbh_bus *bus, struct usbh_urb *urb)
 
     qh->remove_in_iaad = 0;
 
-    if (qh->killed == 1U) {
-        qh->killed = 2U;
-        return;
-    }
-
     if (urb->timeout) {
         usb_osal_sem_give(qh->waitsem);
     } else {
@@ -1362,27 +1357,8 @@ int usbh_kill_urb(struct usbh_urb *urb)
     EHCI_HCOR->usbcmd |= (EHCI_USBCMD_PSEN | EHCI_USBCMD_ASEN);
 
     qh = (struct ehci_qh_hw *)urb->hcpriv;
+    qh->remove_in_iaad = 0;
     urb->errorcode = -USB_ERR_SHUTDOWN;
-
-    if (remove_in_iaad) {
-        qh->killed = 1U; /* trigger iaad isr and wait isr done */
-        qh->remove_in_iaad = 1;
-        EHCI_HCOR->usbcmd |= EHCI_USBCMD_IAAD;
-        usb_osal_leave_critical_section(flags);
-
-        volatile uint32_t timeout = 0;
-        while (qh->killed != 2) {
-            timeout++;
-            if (timeout > 200000U) {
-                qh->remove_in_iaad = 0;
-                qh->killed = 0;
-                return -USB_ERR_TIMEOUT;
-            }
-        }
-        qh->killed = 0;
-    } else {
-        usb_osal_leave_critical_section(flags);
-    }
 
     if (urb->timeout) {
         usb_osal_sem_give(qh->waitsem);
@@ -1390,9 +1366,26 @@ int usbh_kill_urb(struct usbh_urb *urb)
         ehci_qh_free(bus, qh);
     }
 
+    if (remove_in_iaad) {
+        volatile uint32_t timeout = 0;
+        EHCI_HCOR->usbsts = EHCI_USBSTS_IAA;
+        EHCI_HCOR->usbcmd |= EHCI_USBCMD_IAAD;
+        while (!(EHCI_HCOR->usbsts & EHCI_USBSTS_IAA)) {
+            timeout++;
+            if (timeout > 200000) {
+                USB_LOG_ERR("kill_urb iaad timeout\r\n");
+                usb_osal_leave_critical_section(flags);
+                return -USB_ERR_TIMEOUT;
+            }
+        }
+        EHCI_HCOR->usbsts = EHCI_USBSTS_IAA;
+    }
+
     if (urb->complete) {
         urb->complete(urb->arg, urb->errorcode);
     }
+
+    usb_osal_leave_critical_section(flags);
 
     return 0;
 }
